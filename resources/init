@@ -1,0 +1,30 @@
+#!/bin/busybox sh
+
+/bin/busybox --install
+
+mount -t proc proc /proc
+mount -t sysfs none /sys
+
+mkdir -p /mnt/cdrom
+mkdir -p /mnt/ro
+mkdir -p /mnt/rw
+
+sleep 3
+mdev -s
+
+DRV=$(blkid | grep LFSISO | awk '{ print $1; }' | sed 's/://g' | head -n1)
+mount -o ro $DRV /mnt/cdrom
+mount -t squashfs -o loop /mnt/cdrom/lfs.sqsh /mnt/ro
+mount -t tmpfs tmpfs /mnt/rw
+
+mkdir -p /mnt/rw/data
+mkdir -p /mnt/rw/work
+
+mount -t overlay overlay -o lowerdir=/mnt/ro,upperdir=/mnt/rw/data,workdir=/mnt/rw/work /mnt/rootfs
+
+echo $DRV > /name.txt
+
+umount /proc /sys
+
+#exec /bin/busybox sh
+exec switch_root /mnt/rootfs /sbin/init
